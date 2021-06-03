@@ -63,7 +63,8 @@ WindowsServiceBackend::WindowsServiceBackend(Service *service) :
 	ZeroMemory(&_status, sizeof(_status));
 	_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
 	_status.dwCurrentState = SERVICE_START_PENDING;
-	_status.dwControlsAccepted = SERVICE_ACCEPT_PAUSE_CONTINUE | SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
+    _status.dwControlsAccepted = SERVICE_ACCEPT_PAUSE_CONTINUE | SERVICE_ACCEPT_STOP |
+            SERVICE_ACCEPT_PRESHUTDOWN | SERVICE_ACCEPT_POWEREVENT;
 	_status.dwWin32ExitCode = NO_ERROR;
 	_status.dwServiceSpecificExitCode = EXIT_SUCCESS;
 	_status.dwWaitHint = 30000; //30 seconds should suffice
@@ -212,7 +213,7 @@ void WindowsServiceBackend::serviceMain(DWORD dwArgc, wchar_t **lpszArgv)
 	Q_ASSERT(_backendInstance);
 
 	qCDebug(logBackend) << "registering service";
-	_backendInstance->_statusHandle = RegisterServiceCtrlHandlerW(SVCNAME, WindowsServiceBackend::handler);
+    _backendInstance->_statusHandle = RegisterServiceCtrlHandlerExW(SVCNAME, WindowsServiceBackend::handler, NULL);
 	if (!_backendInstance->_statusHandle) {
 		qCCritical(logBackend) << "Failed to acquire service handle with error:"
 							   << qUtf8Printable(qt_error_string(GetLastError()));
@@ -248,16 +249,16 @@ void WindowsServiceBackend::serviceMain(DWORD dwArgc, wchar_t **lpszArgv)
 							  Q_ARG(QtService::ServiceBackend::ServiceCommand, ServiceCommand::Start));
 }
 
-void WindowsServiceBackend::handler(DWORD dwOpcode)
+DWORD WindowsServiceBackend::handler(DWORD dwOpcode, DWORD eventType, void *eventData, void *context)
 {
 	qCDebug(logBackend) << "received service event" << dwOpcode;
 	// could theoretically happen in a cleanup scenario?
 	if(!_backendInstance)
-		return;
+        return ERROR_INVALID_HANDLE;
 
 	switch (dwOpcode) {
 	case SERVICE_CONTROL_STOP:
-	case SERVICE_CONTROL_SHUTDOWN:
+    case SERVICE_CONTROL_PRESHUTDOWN:
 		_backendInstance->quitService();
 		break;
 	case SERVICE_CONTROL_PAUSE:
@@ -278,6 +279,7 @@ void WindowsServiceBackend::handler(DWORD dwOpcode)
 		}
 		break;
 	}
+    return NO_ERROR;
 }
 
 void WindowsServiceBackend::winsvcMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &message)

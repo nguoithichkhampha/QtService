@@ -62,7 +62,7 @@ private:
 	void setStatus(DWORD status);
 
 	static void WINAPI serviceMain(DWORD dwArgc, wchar_t** lpszArgv);
-	static void WINAPI handler(DWORD dwOpcode);
+    static DWORD  WINAPI handler(DWORD dwOpcode, DWORD eventType, void *eventData, void *context);
 
 	static void winsvcMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &message);
 };
