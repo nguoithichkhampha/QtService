@@ -272,11 +272,10 @@ DWORD WindowsServiceBackend::handler(DWORD dwOpcode, DWORD eventType, void *even
 								  Q_ARG(QtService::ServiceBackend::ServiceCommand, ServiceCommand::Resume));
 		break;
 	default:
-		if (dwOpcode >= 128 && dwOpcode <= 255) {
-			QMetaObject::invokeMethod(_backendInstance, "processServiceCallbackImpl", Qt::QueuedConnection,
+        // this only a callback function to handle service event
+        QMetaObject::invokeMethod(_backendInstance, "processServiceCallbackImpl", Qt::QueuedConnection,
 									  Q_ARG(QByteArray, "command"),
-									  Q_ARG(QVariantList, QVariantList{QVariant::fromValue(dwOpcode)}));
-		}
+                                      Q_ARG(QVariantList, (QVariantList{QVariant::fromValue(dwOpcode), QVariant::fromValue(eventType)})));
 		break;
 	}
     return NO_ERROR;
